@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>RoyalRush - Overseer Edition</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* START SCREEN */
+#startScreen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 9999;
+}
+
+#startBG {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+}
+
+#battleBtn {
+  position: absolute;      /* absolute positioning inside #startScreen */
+  left: 50%;               /* center horizontally */
+  bottom: 110px;           /* adjust this value to match the vertical position on your image */
+  transform: translateX(-50%);
+  padding: 18px 40px;
+  font-size: 28px;
+  font-weight: 900;
+  background: gold;
+  border: 4px solid #000;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 0 20px #000;
+  z-index: 2;
+}
+ 
+
+#countdown {
+  position: absolute;
+  z-index: 3;
+  font-size: 140px;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 0 30px black;
+}
+
+  /* Layout */
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: #1b1f24;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    color: #e6e6e6;
+  }
+
+  #container {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "header header"
+      "sidebar game";
+    height: 100%;
+  }
+
+  header {
+    grid-area: header;
+    background: #0f1318;
+    border-bottom: 1px solid #2a2f36;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  #timer, #status {
+    font-weight: 600;
+  }
+
+  #sidebar {
+    grid-area: sidebar;
+    border-right: 1px solid #2a2f36;
+    padding: 12px;
+    background: #13171d;
+    overflow-y: auto;
+  }
+
+  #game {
+    grid-area: game;
+    position: relative;
+    background: #2c3f2c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #canvas {
+    background: #395939;
+    border: 3px solid #30363d;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  .card {
+    background: #20252b;
+    border: 1px solid #343a42;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+
+  .card h3 {
+    margin: 0 0 6px;
+    font-size: 14px;
+  }
+
+  .card button {
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    border-radius: 6px;
+    border: 1px solid #3b424b;
+    background: #0ea5e9;
+    color: #082135;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  /* Disabled State for Cooldowns */
+  .card button:disabled {
+    background: #3b424b;
+    color: #8b949e;
+    cursor: not-allowed;
+    border-color: #30363d;
+  }
+
+  .card button.secondary {
+    background: #f59e0b;
+    color: #2d1900;
+  }
+
+  .card button.spell {
+    background: #ef4444;
+    color: #2c0a0a;
+  }
+
+  .help {
+    background: #1a1f25;
+    border: 1px dashed #39414a;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .row .card {
+    flex: 1;
+  }
+
+  /* --- END SCREEN --- */
+  #endOverlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 12, 14, 0.65);
+    z-index: 999;
+  }
+
+  #endBox {
+    background: #0f1318;
+    border: 1px solid #2a2f36;
+    border-radius: 10px;
+    padding: 16px;
+    width: 320px;
+    text-align: center;
+  }
+
+  #endBox h2 {
+    margin-top: 0;
+  }
+
+  #endBox button {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #3b424b;
+    background: #0ea5e9;
+    color: #082135;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+</style>
+</head>
+<body>
+<!-- ===================== START SCREEN ===================== -->
+<div id="startScreen">
+  <img id="startBG" src="Copilot_20251210_094919.png" alt="Home Screen" />
+  <button id="battleBtn">BATTLE</button>
+
+  <!-- Countdown -->
+  <div id="countdown" style="display:none;">3</div>
+</div>
+
+<div id="container">
+  <header>
+    <h1>RoyalRush</h1>
+    <div id="timer">03:00</div>
+    <div id="status" style="margin-left:auto">Place a card, then click the field</div>
+  </header>
+
+  <aside id="sidebar">
+    <div class="help">
+      <strong>How to play:</strong> Click a card, then click on the field to place it.
+      Units must use the bridge!
+      Watch your cooldowns.
+    </div>
+
+    <div class="row">
+      <div class="card">
+        <h3>Skeleton Army</h3>
+        <div>10 skeletons (5s CD)</div>
+        <button data-card="skeletonArmy">Place</button>
+      </div>
+      <div class="card">
+        <h3>Log</h3>
+        <div>Line damage (32s CD)</div>
+        <button class="spell" data-card="log">Cast</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="card">
+        <h3>Witch</h3>
+        <div>Ranged (8s CD)</div>
+        <button data-card="witch">Place</button>
+      </div>
+      <div class="card">
+        <h3>PEKKA</h3>
+        <div>Tank (15s CD)</div>
+        <button data-card="pekka">Place</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="card">
+        <h3>Goblin Barrel</h3>
+        <div>Burst (20s CD)</div>
+        <button class="spell" data-card="goblinBarrel">Cast</button>
+      </div>
+      <div class="card">
+        <h3>Arrows</h3>
+        <div>AOE (10s CD)</div>
+        <button class="spell" data-card="arrows">Cast</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Goblin Hut</h3>
+      <div>Spawner (45s CD)</div>
+      <button class="secondary" data-card="goblinHut">Place</button>
+    </div>
+
+    <!-- NEW: Tesla & MegaKnight cards -->
+    <div class="row">
+      <div class="card">
+        <h3>Tesla</h3>
+        <div>Defensive tower (500 HP, shoots 50 dmg/sec)</div>
+        <button class="secondary" data-card="tesla">Place</button>
+      </div>
+      <div class="card">
+        <h3>MegaKnight</h3>
+        <div>Heavy unit — 1500 HP, 200 dmg, very slow (25s CD)</div>
+        <button data-card="megaKnight">Place</button>
+      </div>
+    </div>
+
+    <div class="help">
+      Tips:
+      - Units cannot fly over the river gap.<br>
+      - Funnel troops to the bridge.<br>
+    </div>
+  </aside>
+
+  <main id="game">
+    <canvas id="canvas" width="900" height="600"></canvas>
+
+    <div id="endOverlay">
+      <div id="endBox">
+        <h2 id="endTitle">Match Over</h2>
+        <p id="endDesc"></p>
+        <button id="restartBtn">Play Again</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ===========================================================
+      RoyalRush — Overseer Update (Boss Mode AI)
+      + Bridge Pathing
+      + Cooldown System
+      + Increased Tower HP
+      + MegaKnight & Tesla
+      + Boss-mode AI upgrades (damage buff, faster AI cooldowns, punish expensive moves, defend towers aggressively)
+   =========================================================== */
+
+(() => {
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const W = canvas.width;
+const H = canvas.height;
+
+const BRIDGE_Y = H/2;
+const BRIDGE_WIDTH = 120;
+// Defining bridge boundaries
+const BRIDGE_LEFT = (W/2) - BRIDGE_WIDTH/2;
+const BRIDGE_RIGHT = (W/2) + BRIDGE_WIDTH/2;
+
+const PLAYER = "player";
+const ENEMY  = "enemy";
+
+const MATCH_SECONDS = 180;
+let timeLeft = MATCH_SECONDS;
+
+let selectedCard = null;
+
+const units = [];
+const projectiles = []; // for Tesla shots and other projectile-type effects
+const spells = [];
+const towers = [];
+
+// Boss Mode flags / tuning
+const BOSS_MODE = true;           // master toggle for boss behavior
+const BOSS_DAMAGE_MULT = BOSS_MODE ? 1.05 : 1.0; // +5% damage
+const AI_COOLDOWN_REDUCTION = 0; // no AI cooldown advantage
+
+
+// Cooldown Tracker object (player UI)
+const currentCooldowns = {
+  skeletonArmy: 0,
+  log: 0,
+  witch: 0,
+  pekka: 0,
+  goblinBarrel: 0,
+  arrows: 0,
+  goblinHut: 0,
+  tesla: 0,
+  megaKnight: 0
+};
+
+// Separate AI cooldown tracker (so AI can have different cooldowns)
+const aiCooldowns = {};
+
+// quick access to last player-placed card (for punishment)
+let lastPlayerPlacedCard = null;
+let lastPlayerPlacedTime = 0;
+
+const statusEl = document.getElementById("status");
+const timerEl = document.getElementById("timer");
+const endOverlay = document.getElementById("endOverlay");
+const endTitle = document.getElementById("endTitle");
+const endDesc = document.getElementById("endDesc");
+const restartBtn = document.getElementById("restartBtn");
+
+/* UPDATED CARD DEFS WITH COOLDOWNS & COSTS */
+const CARD_DEFS = {
+  skeletonArmy: { type:"unit", cost:3, cooldown: 5 },
+  log:          { type:"spell", cost:2, cooldown:32 },
+  witch:        { type:"unit", cost:4, cooldown: 10 },
+  pekka:        { type:"unit", cost:8, cooldown: 15 },
+  goblinBarrel: { type:"spell", cost:3, cooldown: 20 },
+  arrows:       { type:"spell", cost:3, cooldown: 10 }, // Defaulted to 10s
+  goblinHut:    { type:"structure", cost:5, cooldown: 45 },
+  tesla:        { type:"structure", cost:6, cooldown: 90 },
+  megaKnight:   { type:"unit", cost:10, cooldown: 25 }
+};
+
+const STATS = {
+  skeleton: { hp:35, dmg:15, range:18, speed:65 },
+  witch:    { hp:200, dmg:50, range:200, speed:55 },
+  pekka:    { hp:1200, dmg:260, range:22, speed:30 },
+  goblin:   { hp:90, dmg:25, range:20, speed:75 },
+  hut:      { hp:800, duration:45, spawnEvery:2 },
+
+  // MegaKnight
+  megaKnight: { hp:1500, dmg:350, range:25, speed:15 },
+
+  // Tesla stats (structure)
+  tesla: { hp:2500, dmg:100, range:160, shootInterval: 1 / 6 }
+};
+
+
+
+const SPELLS = {
+  log:    { dmg:170, width:36, length:250, speed:260 },
+  arrows: { dmg:110, radius:70 },
+  barrel: { goblins:3 }
+};
+
+/* ============== TOWERS (Updated HP to 3000) ============== */
+function addTowers() {
+  towers.push({ id:"p_left",  side:PLAYER, hp:3000, x:W*0.35, y:H-80, dead:false });
+  towers.push({ id:"p_right", side:PLAYER, hp:3000, x:W*0.65, y:H-80, dead:false });
+
+  towers.push({ id:"e_left",  side:ENEMY, hp:3000, x:W*0.35, y:80, dead:false });
+  towers.push({ id:"e_right", side:ENEMY, hp:3000, x:W*0.65, y:80, dead:false });
+}
+
+/* ============== DRAW TOWER ============== */
+function drawTower(t) {
+  ctx.fillStyle = t.side === PLAYER ? "#4cc9f0" : "#ef233c";
+  ctx.beginPath();
+  ctx.arc(t.x, t.y, 20, 0, Math.PI*2);
+  ctx.fill();
+
+  ctx.fillStyle = "#fff";
+  ctx.font = "12px sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(Math.max(0, Math.floor(t.hp)), t.x, t.y - 30);
+
+  if (t.dead || t.hp <= 0) {
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(t.x - 22, t.y - 22);
+    ctx.lineTo(t.x + 22, t.y + 22);
+    ctx.moveTo(t.x + 22, t.y - 22);
+    ctx.lineTo(t.x - 22, t.y + 22);
+    ctx.stroke();
+  }
+}
+
+/* ============== GENERIC DISTANCE ============== */
+function dist(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+/* ============== UNIT CREATION ============== */
+function spawnUnit(type, side, x, y) {
+  const s = STATS[type];
+  units.push({
+    type,
+    side,
+    x, y,
+    hp: s.hp,
+    target: null,
+    cooldown: 0,
+    timer: 0
+  });
+}
+
+function placeHut(side, x, y) {
+  const s = STATS.hut;
+  units.push({
+    type: "hut",
+    side,
+    x, y,
+    hp: s.hp,
+    timer: 0,
+    expire: s.duration
+  });
+}
+
+function placeTesla(side, x, y) {
+  // Tesla represented as a unit-like structure in the units[] array
+  const s = STATS.tesla;
+  units.push({
+    type: "tesla",
+    side,
+    x, y,
+    hp: s.hp,
+    timer: 0
+  });
+}
+
+function castLog(side, x, y) {
+  spells.push({
+    type: "log",
+    side,
+    x, y,
+    dir: side === PLAYER ? -1 : 1,
+    traveled: 0
+  });
+}
+
+function castArrows(side, x, y) {
+  spells.push({
+    type: "arrows",
+    side,
+    x, y
+  });
+}
+
+function castBarrel(side, x, y) {
+  const s = SPELLS.barrel;
+  for (let i=0;i<s.goblins;i++) {
+    const offsetX = (i-1)*20;
+    spawnUnit("goblin", side, x+offsetX, y+5);
+  }
+}
+
+/* ============== INIT AI COOLDOWNS ============== */
+
+function initAICooldowns() {
+  for (let key in CARD_DEFS) {
+    // AI cooldown is card cooldown minus reduction (min 1)
+    const base = CARD_DEFS[key].cooldown || 1;
+    const reduced = base;  // no reduction
+    aiCooldowns[key] = 0; // ready to play at start
+    // also store the base reduced cooldown value for use when setting cooldowns
+    aiCooldowns[key + "_base"] = reduced;
+  }
+}
+
+/* ============== UPDATE COOLDOWNS (PLAYER UI only) ============== */
+function updateCooldowns(dt) {
+  // Decrease timers (player cooldowns)
+  for (let key in currentCooldowns) {
+    if (currentCooldowns[key] > 0) {
+      currentCooldowns[key] -= dt;
+      if (currentCooldowns[key] < 0) currentCooldowns[key] = 0;
+    }
+  }
+
+  // Decrease AI cooldowns
+  for (let key in aiCooldowns) {
+    if (!key.endsWith("_base")) {
+      if (aiCooldowns[key] > 0) {
+        aiCooldowns[key] -= dt;
+        if (aiCooldowns[key] < 0) aiCooldowns[key] = 0;
+      }
+    }
+  }
+
+  // Update UI Buttons
+  document.querySelectorAll("button[data-card]").forEach(btn => {
+    const key = btn.dataset.card;
+    const cd = currentCooldowns[key];
+    const def = CARD_DEFS[key];
+
+    if (cd > 0) {
+      btn.disabled = true;
+      btn.textContent = Math.ceil(cd) + "s";
+    } else {
+      btn.disabled = false;
+      // Reset text based on type
+      if (def.type === "spell") btn.textContent = "Cast";
+      else btn.textContent = "Place";
+    }
+  });
+}
+
+/* ============== AI HELPERS & BEHAVIOR ============== */
+
+// spawn a defensive burst near a tower (used when AI tower attacked)
+function aiSpawnDefenseNear(tower, count = 6) {
+  for (let i=0;i<count;i++) {
+    // prefer spawning fast cheap units
+    const rx = tower.x + (Math.random()*60-30);
+    const ry = tower.y + (tower.side === ENEMY ? 30 : -30);
+    spawnUnit("goblin", ENEMY, rx, ry);
+  }
+  // if available, try to place a hut or witch or pekka depending on cooldowns
+  if (aiCanPlay("goblinHut")) {
+    placeHut(ENEMY, tower.x + 40, tower.y + 20);
+    aiSetCooldown("goblinHut");
+  } else if (aiCanPlay("witch")) {
+    spawnUnit("witch", ENEMY, tower.x + 30, tower.y + 10);
+    aiSetCooldown("witch");
+  }
+}
+
+// check if AI can play card
+function aiCanPlay(cardName) {
+  return aiCooldowns[cardName] <= 0;
+}
+
+// set AI cooldown for a card after playing it
+function aiSetCooldown(cardName) {
+  const reducedBase = aiCooldowns[cardName + "_base"] || 1;
+  aiCooldowns[cardName] = reducedBase;
+}
+
+// AI punishment for expensive player placement
+function punishExpensiveMove(placedCardName) {
+  // If the placed card cost is high (>=8), spawn an immediate counter wave
+  const def = CARD_DEFS[placedCardName];
+  if (!def) return;
+  if (def.cost >= 8) {
+    // spawn a quick counter attack of goblins and a witch
+    for (let i=0;i<6;i++) {
+      const x = W * 0.6 + Math.random()*40; // spawn on enemy side approaching player
+      const y = H*0.5 + (Math.random()*120-60);
+      spawnUnit("goblin", ENEMY, x, y);
+    }
+    if (aiCanPlay("witch")) {
+      spawnUnit("witch", ENEMY, W*0.6+20, H*0.45);
+      aiSetCooldown("witch");
+    }
+    // also try to spawn a pekka if available
+    if (aiCanPlay("pekka")) {
+      spawnUnit("pekka", ENEMY, W*0.6+40, H*0.45);
+      aiSetCooldown("pekka");
+    }
+  }
+}
+
+/* ============== UNIT AI (With Bridge Logic + Tesla Shooting) ============== */
+function updateUnits(dt) {
+  for (let u of units) {
+
+    // Structure logic - Hut
+    if (u.type === "hut") {
+      u.expire -= dt;
+      u.timer += dt;
+      if (u.timer >= STATS.hut.spawnEvery) {
+        u.timer = 0;
+        spawnUnit("goblin", u.side, u.x, u.y + (u.side === PLAYER ? -20 : 20));
+      }
+      if (u.expire <= 0 || u.hp <= 0) u.dead = true;
+      continue;
+    }
+
+    // Structure logic - Tesla shooting
+    if (u.type === "tesla") {
+      // Increase internal timer
+      u.timer += dt;
+      if (u.timer >= STATS.tesla.shootInterval) {
+        u.timer = 0;
+
+        // Acquire nearest enemy unit (prioritize units only)
+        let nearest = null;
+        let nd = 99999;
+        for (let e of units) {
+          if (e.side !== u.side && !e.dead && e.type !== "tesla" && e.type !== "hut") {
+            const d = dist(u, e);
+            if (d < nd && d <= STATS.tesla.range) {
+              nd = d;
+              nearest = e;
+            }
+          }
+        }
+
+        // Also check towers if no units found and they are in range
+        if (!nearest) {
+          for (let t of towers) {
+            if (t.side !== u.side && !t.dead) {
+              const d = dist(u, t);
+              if (d < nd && d <= STATS.tesla.range) {
+                nd = d;
+                nearest = t;
+              }
+            }
+          }
+        }
+
+        // If we have a target, spawn a projectile aimed at it
+        if (nearest) {
+          projectiles.push({
+            x: u.x,
+            y: u.y,
+            target: nearest,
+            damage: STATS.tesla.dmg * (u.side === ENEMY ? BOSS_DAMAGE_MULT : 1),
+            color: "#0af",
+            speed: 300, // px/sec
+            dead: false
+          });
+        }
+      }
+
+      // If Tesla's HP is gone, mark as dead
+      if (u.hp <= 0) u.dead = true;
+
+      continue;
+    }
+
+    if (u.hp <= 0) {
+      u.dead = true;
+      continue;
+    }
+
+    const s = STATS[u.type];
+
+    // 1. Acquire nearest target (units & towers)
+    let nearest = null;
+    let nearestDist = 99999;
+
+    for (let e of [...units, ...towers]) {
+      if (e.side !== u.side && !e.dead) {
+        const d = dist(u, e);
+        if (d < nearestDist) {
+          nearestDist = d;
+          nearest = e;
+        }
+      }
+    }
+
+    // 2. Combat or Move
+    if (nearest && nearestDist < s.range) {
+      // Attack
+      u.cooldown -= dt;
+      if (u.cooldown <= 0) {
+        // Apply boss damage multiplier when AI deals damage
+        const effectiveDmg = (u.side === ENEMY) ? s.dmg * BOSS_DAMAGE_MULT : s.dmg;
+        nearest.hp -= effectiveDmg;
+        if (nearest.hp <= 0) nearest.dead = true;
+        u.cooldown = 1; 
+      }
+    } else {
+      // Move Logic
+      let tx = nearest ? nearest.x : W/2;
+      let ty = nearest ? nearest.y : (u.side === PLAYER ? 50 : H-50);
+
+      // --- BRIDGE LOGIC START ---
+      const unitIsTop = u.y < BRIDGE_Y;
+      const targetIsTop = ty < BRIDGE_Y;
+      const needToCross = (unitIsTop !== targetIsTop);
+
+      // Are we safe on the bridge vertical zone?
+      const onBridgeVertical = Math.abs(u.y - BRIDGE_Y) < 25; 
+
+      if (needToCross && !onBridgeVertical) {
+        // If we are not aligned with the bridge horizontally...
+        // Bridge X range is BRIDGE_LEFT to BRIDGE_RIGHT
+        if (u.x < BRIDGE_LEFT || u.x > BRIDGE_RIGHT) {
+          // Force target to Bridge Center
+          tx = W/2;
+          ty = BRIDGE_Y;
+        }
+      }
+      // --- BRIDGE LOGIC END ---
+
+      const ang = Math.atan2(ty - u.y, tx - u.x);
+      u.x += Math.cos(ang) * s.speed * dt;
+      u.y += Math.sin(ang) * s.speed * dt;
+    }
+  }
+
+  // remove dead
+  for (let i = units.length - 1; i >= 0; i--) {
+    if (units[i].dead) units.splice(i, 1);
+  }
+}
+
+/* ============== SPELL & PROJECTILE LOGIC ============== */
+function updateSpells(dt) {
+  // Handle spells (log/arrows) as before
+  for (let s of spells) {
+    if (s.type === "log") {
+      const speed = SPELLS.log.speed;
+      s.y += s.dir * speed * dt;
+      s.traveled += speed * dt;
+
+      const w = SPELLS.log.width;
+      for (let e of [...units, ...towers]) {
+        if (e.side !== s.side && !e.dead) {
+          if (Math.abs(e.x - s.x) < w && Math.abs(e.y - s.y) < 20) {
+            e.hp -= SPELLS.log.dmg * (s.side === ENEMY ? BOSS_DAMAGE_MULT : 1);
+            if (e.hp <= 0) e.dead = true;
+          }
+        }
+      }
+      if (s.traveled > SPELLS.log.length) s.dead = true;
+    }
+
+    if (s.type === "arrows") {
+      for (let e of [...units, ...towers]) {
+        if (e.side !== s.side && !e.dead) {
+          if (dist(s, e) < SPELLS.arrows.radius) {
+            e.hp -= SPELLS.arrows.dmg * (s.side === ENEMY ? BOSS_DAMAGE_MULT : 1);
+            if (e.hp <= 0) e.dead = true;
+          }
+        }
+      }
+      s.dead = true;
+    }
+  }
+
+  // remove dead spells
+  for (let i = spells.length - 1; i >= 0; i--) {
+    if (spells[i].dead) spells.splice(i, 1);
+  }
+
+  // Update projectiles (Tesla shots etc.)
+  for (let p of projectiles) {
+    if (p.dead) continue;
+
+    // If target died or removed, mark projectile dead
+    if (!p.target || p.target.dead) {
+      p.dead = true;
+      continue;
+    }
+
+    // Move projectile toward target
+    const dx = p.target.x - p.x;
+    const dy = p.target.y - p.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 6) {
+      // Hit
+      if (p.target.hp !== undefined) {
+        p.target.hp -= p.damage * (p.target.side === PLAYER && BOSS_MODE ? 1 : 1); // p.damage already includes boss multiplier for AI shooter
+        if (p.target.hp <= 0) p.target.dead = true;
+      }
+      p.dead = true;
+      continue;
+    } else {
+      const vx = (dx / d) * p.speed;
+      const vy = (dy / d) * p.speed;
+      p.x += vx * dt;
+      p.y += vy * dt;
+    }
+  }
+
+  // remove dead projectiles
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    if (projectiles[i].dead) projectiles.splice(i, 1);
+  }
+}
+
+/* ============== DRAW UNITS ============== */
+function drawUnits() {
+  for (let u of units) {
+    if (u.type === "hut") {
+      ctx.fillStyle = u.side === PLAYER ? "#d1fae5" : "#fca5a5";
+      ctx.fillRect(u.x - 15, u.y - 15, 30, 30);
+      continue;
+    }
+
+    if (u.type === "tesla") {
+      // Draw Tesla as a blue circle with HP number
+      ctx.fillStyle = "#0ab"; // blue-ish
+      ctx.beginPath();
+      ctx.arc(u.x, u.y, 14, 0, Math.PI*2);
+      ctx.fill();
+
+      // Range circle (subtle)
+      ctx.strokeStyle = "rgba(10,170,190,0.12)";
+      ctx.beginPath();
+      ctx.arc(u.x, u.y, STATS.tesla.range, 0, Math.PI*2);
+      ctx.stroke();
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(Math.max(0, Math.floor(u.hp)), u.x, u.y - 18);
+      continue;
+    }
+    
+    // Normal units
+    ctx.fillStyle = u.side === PLAYER ? "#4cc9f0" : "#ef233c";
+    ctx.beginPath();
+    const radius = u.type === "megaKnight" ? 14 : 10;
+    ctx.arc(u.x, u.y, radius, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = "#fff";
+    ctx.font = "10px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(Math.floor(u.hp), u.x, u.y - 14);
+  }
+}
+
+function drawSpells() {
+  for (let s of spells) {
+    if (s.type === "log") {
+      ctx.fillStyle = "#8d6e63";
+      ctx.fillRect(s.x - 18, s.y - 10, 36, 20);
+    }
+    if (s.type === "arrows") {
+      ctx.strokeStyle = "#ddd";
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, 50, 0, Math.PI*2);
+      ctx.stroke();
+    }
+  }
+
+  // draw projectiles (Tesla shots)
+  for (let p of projectiles) {
+    ctx.fillStyle = p.color || "#0af";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+/* ============== DRAW MAP (bridges + midline) ============== */
+function drawMap() {
+  // River (Dark Water)
+  ctx.fillStyle = "#1e3a5f"; 
+  ctx.fillRect(0, BRIDGE_Y - 15, W, 30);
+
+  // Bridges (Wood)
+  ctx.fillStyle = "#6d4c41";
+  ctx.fillRect(BRIDGE_LEFT, BRIDGE_Y - 15, BRIDGE_WIDTH, 30);
+  
+  // Bridge Details (Planks)
+  ctx.fillStyle = "#5d4037";
+  for(let i=0; i<30; i+=6) {
+      ctx.fillRect(BRIDGE_LEFT, BRIDGE_Y - 15 + i, BRIDGE_WIDTH, 2);
+  }
+}
+
+/* ============== MATCH TIMER ============== */
+function updateTimer(dt) {
+  timeLeft -= dt;
+  if (timeLeft < 0) timeLeft = 0;
+
+  const m = Math.floor(timeLeft / 60);
+  const s = Math.floor(timeLeft % 60);
+  timerEl.textContent = `${m}:${s.toString().padStart(2,"0")}`;
+
+  if (timeLeft <= 0) {
+    endMatch();
+  }
+}
+
+function endMatch() {
+  let playerHP = 0;
+  let enemyHP = 0;
+
+  for (let t of towers) {
+    if (t.side === PLAYER) playerHP += Math.max(0, t.hp);
+    else enemyHP += Math.max(0, t.hp);
+  }
+
+  endOverlay.style.display = "flex";
+
+  if (playerHP > enemyHP) {
+    endTitle.textContent = "You Win!";
+    endDesc.textContent = "Your towers survived with more total HP.";
+  } else if (enemyHP > playerHP) {
+    endTitle.textContent = "You Lose!";
+    endDesc.textContent = "Enemy towers had more HP left.";
+  } else {
+    endTitle.textContent = "Draw!";
+    endDesc.textContent = "Both sides ended with equal HP.";
+  }
+
+  running = false;
+}
+
+function checkTowers() {
+  for (let t of towers) {
+    if (!t.dead && t.hp <= 0) {
+      t.dead = true;
+    }
+  }
+
+  const playerDead = towers.filter(t => t.side === PLAYER && t.dead).length;
+  const enemyDead  = towers.filter(t => t.side === ENEMY  && t.dead).length;
+
+  if (playerDead === 2 || enemyDead === 2) {
+    endMatch();
+  }
+}
+
+/* ============== CLICK HANDLER ============== */
+canvas.addEventListener("mousedown", e => {
+  if (!selectedCard) return;
+
+  // Check cooldown before allowing place
+  if (currentCooldowns[selectedCard] > 0) {
+    statusEl.textContent = "Card is on cooldown!";
+    selectedCard = null;
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const def = CARD_DEFS[selectedCard];
+
+  // Logic to execute card
+  if (def.type === "unit") {
+    if (selectedCard === "skeletonArmy") {
+      for (let i=0;i<10;i++) {
+        spawnUnit("skeleton", PLAYER, x + (Math.random()*40-20), y+Math.random()*40-20);
+      }
+    }
+    if (selectedCard === "witch") spawnUnit("witch", PLAYER, x, y);
+    if (selectedCard === "pekka") spawnUnit("pekka", PLAYER, x, y);
+    if (selectedCard === "megaKnight") spawnUnit("megaKnight", PLAYER, x, y);
+  }
+
+  if (def.type === "structure") {
+    if (selectedCard === "goblinHut") placeHut(PLAYER, x, y);
+    if (selectedCard === "tesla") placeTesla(PLAYER, x, y);
+  }
+
+  if (def.type === "spell") {
+    if (selectedCard === "log") castLog(PLAYER, x, y);
+    if (selectedCard === "arrows") castArrows(PLAYER, x, y);
+    if (selectedCard === "goblinBarrel") castBarrel(PLAYER, x, y);
+  }
+
+  // SET PLAYER COOLDOWN
+  currentCooldowns[selectedCard] = def.cooldown;
+
+  // Record for punishment logic
+  lastPlayerPlacedCard = selectedCard;
+  lastPlayerPlacedTime = performance.now();
+
+  // Punish if expensive
+  punishExpensiveMove(selectedCard);
+
+  selectedCard = null;
+  statusEl.textContent = "Card placed!";
+});
+
+/* ============== CARD BUTTONS ============== */
+document.querySelectorAll("[data-card]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    // UI check for cooldown
+    const cardName = btn.dataset.card;
+    if (currentCooldowns[cardName] > 0) return;
+
+    selectedCard = cardName;
+    statusEl.textContent = "Click the field to place " + selectedCard;
+  });
+});
+
+/* ============== BASIC ENEMY AI (UPGRADED: Boss Mode) ============== */
+let aiTimer = 0;
+
+function updateAI(dt) {
+  // decrement local timer
+  aiTimer -= dt;
+  if (aiTimer > 0) {
+    return; // only act when timer <= 0
+  }
+
+  // set next action time slightly faster in boss mode
+  aiTimer = 1 + Math.random()*2; // action every ~1-3s (faster than before)
+
+  // Aggressive defense: if any enemy tower (AI towers) got damaged recently, heavy defense
+  let towerUnderAttack = null;
+  for (let t of towers) {
+    if (t.side === ENEMY && !t.dead) {
+      // If tower HP below some threshold or recently decreased, we consider it under attack
+      if (t._lastHP === undefined) t._lastHP = t.hp;
+      if (t.hp < t._lastHP) {
+        towerUnderAttack = t;
+      }
+      t._lastHP = t.hp;
+    }
+  }
+
+  if (towerUnderAttack) {
+    // Spawn large defense near the tower immediately
+    aiSpawnDefenseNear(towerUnderAttack, 8);
+    // Also try to play expensive cards if available to shore up defense
+    if (aiCanPlay("goblinHut")) { placeHut(ENEMY, towerUnderAttack.x + 40, towerUnderAttack.y + 20); aiSetCooldown("goblinHut"); }
+    if (aiCanPlay("tesla")) { placeTesla(ENEMY, towerUnderAttack.x + 20, towerUnderAttack.y + 10); aiSetCooldown("tesla"); }
+    return;
+  }
+
+  // Normal AI decision: pick a playable card (from full card set) with simple heuristics
+  const playable = [];
+  for (let key in CARD_DEFS) {
+    if (aiCanPlay(key)) playable.push(key);
+  }
+
+  // Prioritize spells if player has many units on field
+  if (playable.length === 0) return;
+
+  // Very simple heuristics: choose random but prefer attacking cards
+  // Score each playable card
+  const scores = playable.map(k => {
+    let score = Math.random();
+    const def = CARD_DEFS[k];
+    // Prefer spawning units if player has >6 units on field
+    if (def.type === "unit") score += units.filter(u => u.side === PLAYER).length > 6 ? 0.8 : 0.2;
+    // Prefer spells to counter grouped units
+    if (def.type === "spell" && units.filter(u=>u.side===PLAYER).length>4) score += 0.7;
+    // Prefer structure if no structures exist for AI yet
+    if (def.type === "structure") {
+      const aiHasStructure = units.some(u => u.side === ENEMY && (u.type === "hut" || u.type === "tesla"));
+      if (!aiHasStructure) score += 0.6;
+    }
+    // reduce chance for very expensive things slightly
+    if (def.cost >= 8) score -= 0.2;
+    return {key:k, score};
+  });
+
+  scores.sort((a,b)=>b.score-a.score);
+  const choice = scores[0].key;
+
+  // Execute choice: pick random coordinates appropriate for AI side
+  const x = W * (0.3 + Math.random()*0.4);
+  const y = 100 + Math.random()*80;
+
+  const def = CARD_DEFS[choice];
+  if (def.type === "unit") {
+    if (choice === "skeletonArmy") {
+      for (let i=0;i<10;i++) spawnUnit("skeleton", ENEMY, x + (Math.random()*40-20), y+Math.random()*40-20);
+    } else if (choice === "witch") { spawnUnit("witch", ENEMY, x, y); }
+    else if (choice === "pekka") { spawnUnit("pekka", ENEMY, x, y); }
+    else if (choice === "megaKnight") { spawnUnit("megaKnight", ENEMY, x, y); }
+  } else if (def.type === "structure") {
+    if (choice === "goblinHut") { placeHut(ENEMY, x, y); }
+    else if (choice === "tesla") { placeTesla(ENEMY, x, y); }
+  } else if (def.type === "spell") {
+    if (choice === "log") castLog(ENEMY, x, y);
+    if (choice === "arrows") castArrows(ENEMY, x, y);
+    if (choice === "goblinBarrel") castBarrel(ENEMY, x, y);
+  }
+
+  // set AI cooldown for played card
+  aiSetCooldown(choice);
+}
+
+/* ============== MAIN LOOP ============== */
+let last = 0;
+let running = true;
+
+function loop(ts) {
+  if (!running) return;
+  const dt = (ts - last) / 1000;
+  last = ts;
+
+  updateCooldowns(dt); // Manage player and AI cooldowns
+  updateAI(dt);
+  updateUnits(dt);
+  updateSpells(dt);
+  updateTimer(dt);
+  checkTowers();
+
+  ctx.clearRect(0,0,W,H);
+
+  drawMap();
+  for (let t of towers) drawTower(t);
+  drawUnits();
+  drawSpells();
+
+  requestAnimationFrame(loop);
+}
+
+/* ============== RESTART BUTTON ============== */
+restartBtn.addEventListener("click", () => {
+  location.reload();
+});
+
+/* ============== INIT ============== */
+addTowers();
+initAICooldowns();
+// requestAnimationFrame(loop);  <-- remove this
+running = false; // prevent game from starting early
+/* ===================== START SCREEN & COUNTDOWN ===================== */
+const startScreen = document.getElementById("startScreen");
+const battleBtn = document.getElementById("battleBtn");
+const countdown = document.getElementById("countdown");
+
+battleBtn.addEventListener("click", () => {
+  battleBtn.style.display = "none";
+  countdown.style.display = "block";
+
+  let n = 3;
+  countdown.textContent = n;
+
+  const interval = setInterval(() => {
+    n--;
+    if (n > 0) {
+      countdown.textContent = n;
+    } else if (n === 0) {
+      countdown.textContent = "GO!";
+    } else {
+      clearInterval(interval);
+      startScreen.style.display = "none";
+      running = true;               // allow game loop
+      last = performance.now();     // reset last timestamp
+      requestAnimationFrame(loop);  // start the loop
+    }
+  }, 1000);
+});
+
+
+})();
+/* ===================== START SCREEN & COUNTDOWN ===================== */
+
+const startScreen = document.getElementById("startScreen");
+const battleBtn = document.getElementById("battleBtn");
+const countdown = document.getElementById("countdown");
+
+let gameShouldRun = false; // prevents game from starting until countdown
+
+// Stop game loop until countdown finishes
+running = false;
+
+// When BATTLE is clicked
+battleBtn.addEventListener("click", () => {
+  battleBtn.style.display = "none";
+  countdown.style.display = "block";
+
+  let n = 3;
+  countdown.textContent = n;
+
+  const interval = setInterval(() => {
+    n--;
+    if (n > 0) {
+      countdown.textContent = n;
+    } else if (n === 0) {
+      countdown.textContent = "GO!";
+    } else {
+      clearInterval(interval);
+      startScreen.style.display = "none";
+      running = true;          // start the real game
+      requestAnimationFrame(loop);
+    }
+  }, 1000);
+});
+
+</script>
+
+</body>
+</html>
